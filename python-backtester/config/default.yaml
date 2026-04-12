@@ -1,0 +1,63 @@
+backtest:
+  start_date: "2011-07-24"
+  end_date: "2023-03-15"
+  initial_capital: 1000000
+  risk_free_rate_annual: 0.0
+
+strategy:
+  # DTE constraints - we only have monthly snapshots so accept wider range
+  target_dte: 30
+  min_dte_entry: 18
+  max_dte_entry: 45
+  # Delta targets for strike selection
+  short_put_delta: 0.16
+  long_put_delta: 0.05
+  short_call_delta: 0.16  # for iron condor overlay
+  # Position sizing
+  max_risk_pct_nav: 0.20
+  max_margin_utilisation: 0.60
+  max_spread_width: 200  # cap spread width in points to ensure tradeable sizes
+  # Circuit breaker
+  circuit_breaker_monthly_pct: 0.00
+  circuit_breaker_cooloff_days: 0
+  # Hold to expiration - no early exits in this version
+  hold_to_expiry: true
+  # Long vol: buy bear put spreads when signal says FLAT
+  long_vol_enabled: false
+  long_vol_risk_pct_nav: 0.015    # 1.5% of NAV per long vol trade
+  long_vol_buy_delta: 0.30        # buy this delta put (closer to ATM)
+  long_vol_sell_delta: 0.10       # sell this delta put (further OTM, caps cost)
+  long_vol_max_margin: 0.10       # max 10% of NAV in long vol margin
+
+signals:
+  vrp:
+    source_column: "vrp_xgb"
+    zscore_window: 252
+    min_vrp_raw: 0.0
+    thresholds:
+      extremely_rich: 1.5
+      rich: 0.5
+      normal: 0.0
+      lean: -0.5
+  regime:
+    type: "forecast_uncertainty"
+    zscore_window: 252
+    thresholds:
+      stable: 0.5
+      elevated: 1.0
+      stressed: 1.5
+  supplementary:
+    vix_class_prob_threshold: 0.65
+    rv_class_prob_threshold: 0.65
+    supplementary_reduction: 0.25
+
+execution:
+  spread_fraction: 0.0  # slippage: fill at mid minus 25% of half-spread for sells
+
+data:
+  market_data_path: "data/data_with_rv.csv"
+  option_data_path: "data/Options data.xlsx"
+  rv_forecast_path: "results/tables/rv_regression/xgb_rv_regression_predictions.xlsx"
+  vix_regression_path: "results/tables/xgb_regression_ar1_predictions.xlsx"
+  rv_classification_path: "results/models/rv_forward/xgb_rv_predictions_simple.csv"
+  vix_classification_path: "results/tables/xgb_classification_predictions.xlsx"

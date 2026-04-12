@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>VRP Strategy Tearsheet</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         margin: 20px; background: #0f172a; color: #e2e8f0; }
+  h1 { color: #f8fafc; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+  h2 { color: #cbd5e1; margin-top: 30px; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                   gap: 12px; margin: 20px 0; }
+  .metric-card { background: #1e293b; border-radius: 8px; padding: 16px;
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: 1px solid #334155; }
+  .metric-card .label { color: #94a3b8; font-size: 0.82em; text-transform: uppercase;
+                         letter-spacing: 0.05em; }
+  .metric-card .value { font-size: 1.25em; font-weight: 600; color: #f1f5f9; margin-top: 4px; }
+  .chart { margin: 20px 0; background: #1e293b; border-radius: 8px;
+            padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: 1px solid #334155; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.82em; }
+  th, td { border: 1px solid #334155; padding: 8px 12px; text-align: right; }
+  th { background: #1e293b; font-weight: 600; color: #94a3b8; }
+  td { color: #cbd5e1; }
+  tr:nth-child(even) { background: #1e293b; }
+  tr:nth-child(odd) { background: #0f172a; }
+  .pos { color: #4ade80; } .neg { color: #f87171; }
+  .section-divider { border: none; border-top: 1px solid #334155; margin: 30px 0; }
+  .bucket-table { max-width: 700px; }
+  .bucket-table td, .bucket-table th { text-align: center; }
+</style>
+</head>
+<body>
+<h1>VRP Signal-Gated SPX Options Strategy &mdash; Tearsheet</h1>
+<p style="color:#94a3b8;">Hold-to-expiry bull put spread strategy, gated by XGBoost VRP and regime signals.
+Period: 2011-07-18 to 2023-03-15 &middot; Initial capital: $1,000,000</p>
+
+<h2>Performance Summary</h2>
+<div class="metrics-grid">
+  <div class="metric-card"><div class="label">Total Return</div><div class="value">-0.87%</div></div>
+  <div class="metric-card"><div class="label">CAGR</div><div class="value">-0.08%</div></div>
+  <div class="metric-card"><div class="label">Annualised Vol</div><div class="value">1.13%</div></div>
+  <div class="metric-card"><div class="label">Sharpe Ratio</div><div class="value">-0.07</div></div>
+  <div class="metric-card"><div class="label">Sortino Ratio</div><div class="value">-0.07</div></div>
+  <div class="metric-card"><div class="label">Calmar Ratio</div><div class="value">-0.03</div></div>
+  <div class="metric-card"><div class="label">Omega Ratio</div><div class="value">0.89</div></div>
+  <div class="metric-card"><div class="label">Max Drawdown</div><div class="value">-2.19%</div></div>
+  <div class="metric-card"><div class="label">Max DD Duration</div><div class="value">4,258 days</div></div>
+  <div class="metric-card"><div class="label">VaR (95%)</div><div class="value">-0.93%</div></div>
+  <div class="metric-card"><div class="label">CVaR (95%)</div><div class="value">-1.36%</div></div>
+  <div class="metric-card"><div class="label">VaR (99%)</div><div class="value">-1.73%</div></div>
+  <div class="metric-card"><div class="label">CVaR (99%)</div><div class="value">-1.73%</div></div>
+</div>
+
+<h2>Trade Statistics</h2>
+<div class="metrics-grid">
+  <div class="metric-card"><div class="label">Total Trades</div><div class="value">90</div></div>
+  <div class="metric-card"><div class="label">Wins / Losses</div><div class="value">80 / 10</div></div>
+  <div class="metric-card"><div class="label">Hit Rate</div><div class="value">88.9%</div></div>
+  <div class="metric-card"><div class="label">Avg Win</div><div class="value">$817</div></div>
+  <div class="metric-card"><div class="label">Avg Loss</div><div class="value">-$7,409</div></div>
+  <div class="metric-card"><div class="label">Profit Factor</div><div class="value">0.88</div></div>
+  <div class="metric-card"><div class="label">Premium Capture</div><div class="value">88.49%</div></div>
+  <div class="metric-card"><div class="label">Total P&amp;L</div><div class="value">-$8,739</div></div>
+  <div class="metric-card"><div class="label">Avg Monthly Return</div><div class="value">-0.009%</div></div>
+  <div class="metric-card"><div class="label">Best Month</div><div class="value">0.16%</div></div>
+  <div class="metric-card"><div class="label">Worst Month</div><div class="value">-1.73%</div></div>
+  <div class="metric-card"><div class="label">% Positive Months</div><div class="value">88.9%</div></div>
+</div>
+
+<hr class="section-divider">
+<h2>Charts</h2>
+
+<!-- CHART 1: Equity + Drawdown -->
+<div class="chart"><div id="chart_equity" style="height:550px; width:100%;"></div></div>
+
+<!-- CHART 2: Trade P&L bars -->
+<div class="chart"><div id="chart_trades" style="height:380px; width:100%;"></div></div>
+
+<!-- CHART 3: Cumulative P&L -->
+<div class="chart"><div id="chart_cumpnl" style="height:380px; width:100%;"></div></div>
+
+<!-- CHART 4: Monthly Heatmap -->
+<div class="chart"><div id="chart_heatmap" style="height:420px; width:100%;"></div></div>
+
+<!-- CHART 5: Return Distribution -->
+<div class="chart"><div id="chart_dist" style="height:380px; width:100%;"></div></div>
+
+<!-- CHART 6: Scalar Bucket Analysis -->
+<h2>Signal Scalar Bucket Analysis</h2>
+<table class="bucket-table">
+<thead><tr><th>Bucket</th><th>Trades</th><th>Total P&amp;L</th><th>Avg P&amp;L</th><th>Hit Rate</th></tr></thead>
+<tbody>
+<tr>
+  <td>Low (0-0.33)</td><td>36</td>
+  <td class="pos">$8,739</td>
+  <td class="pos">$243</td>
+  <td>88.9%</td>
+</tr>
+<tr>
+  <td>Mid (0.33-0.67)</td><td>32</td>
+  <td class="pos">$4,100</td>
+  <td class="pos">$128</td>
+  <td>93.8%</td>
+</tr>
+<tr>
+  <td>High (0.67-1.0)</td><td>22</td>
+  <td class="neg">-$21,578</td>
+  <td class="neg">-$981</td>
+  <td>81.8%</td>
+</tr>
+</tbody></table>
+
+<hr class="section-divider">
+<h2>Trade Log</h2>
+<table>
+<thead><tr>
+  <th>Entry</th><th>Expiry</th><th>Short K</th><th>Long K</th><th>Cts</th>
+  <th>Credit</th><th>P&amp;L</th><th>P&amp;L %</th><th>Spot In</th>
+  <th>Spot Out</th><th>VIX</th><th>DTE</th><th>Scalar</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td>2011-07-18</td><td>2011-08-19</td>
+  <td>1215</td><td>1120</td>
+  <td>2</td><td>$1,041</td>
+  <td class="neg">-$17,253</td>
+  <td class="neg">-1.76%</td>
+  <td>1305.44</td><td>1123.53</td>
+  <td>20.95</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2011-08-22</td><td>2011-09-16</td>
+  <td>990</td><td>865</td>
+  <td>2</td><td>$1,705</td>
+  <td class="pos">$503</td>
+  <td class="pos">0.05%</td>
+  <td>1123.82</td><td>1216.01</td>
+  <td>42.44</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2011-09-19</td><td>2011-10-21</td>
+  <td>1080</td><td>970</td>
+  <td>2</td><td>$1,529</td>
+  <td class="pos">$1,529</td>
+  <td class="pos">0.16%</td>
+  <td>1204.09</td><td>1238.25</td>
+  <td>32.73</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2011-10-24</td><td>2011-11-18</td>
+  <td>1150</td><td>1055</td>
+  <td>2</td><td>$1,252</td>
+  <td class="pos">$1,252</td>
+  <td class="pos">0.13%</td>
+  <td>1254.19</td><td>1215.65</td>
+  <td>29.26</td><td>23</td>
+  <td>0.75</td>
+</tr>
+<tr>
+  <td>2011-11-21</td><td>2011-12-16</td>
+  <td>1090</td><td>1020</td>
+  <td>1</td><td>$606</td>
+  <td class="pos">$606</td>
+  <td class="pos">0.06%</td>
+  <td>1192.98</td><td>1219.66</td>
+  <td>32.91</td><td>30</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2012-01-23</td><td>2012-02-17</td>
+  <td>1250</td><td>1180</td>
+  <td>1</td><td>$354</td>
+  <td class="pos">$354</td>
+  <td class="pos">0.04%</td>
+  <td>1316.00</td><td>1361.23</td>
+  <td>18.67</td><td>23</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2012-02-21</td><td>2012-03-16</td>
+  <td>1295</td><td>1225</td>
+  <td>1</td><td>$325</td>
+  <td class="pos">$325</td>
+  <td class="pos">0.03%</td>
+  <td>1362.21</td><td>1404.17</td>
+  <td>18.19</td><td>29</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2012-04-23</td><td>2012-05-18</td>
+  <td>1295</td><td>1245</td>
+  <td>1</td><td>$391</td>
+  <td class="pos">$391</td>
+  <td class="pos">0.04%</td>
+  <td>1366.94</td><td>1295.22</td>
+  <td>18.97</td><td>23</td>
+  <td>0.19</td>
+</tr>
+<tr>
+  <td>2012-05-21</td><td>2012-06-15</td>
+  <td>1235</td><td>1200</td>
+  <td>1</td><td>$264</td>
+  <td class="pos">$264</td>
+  <td class="pos">0.03%</td>
+  <td>1315.99</td><td>1342.84</td>
+  <td>22.01</td><td>30</td>
+  <td>0.12</td>
+</tr>
+<tr>
+  <td>2012-07-23</td><td>2012-08-17</td>
+  <td>1280</td><td>1210</td>
+  <td>1</td><td>$406</td>
+  <td class="pos">$406</td>
+  <td class="pos">0.04%</td>
+  <td>1350.52</td><td>1418.16</td>
+  <td>18.62</td><td>23</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2012-10-22</td><td>2012-11-16</td>
+  <td>1365</td><td>1295</td>
+  <td>1</td><td>$389</td>
+  <td class="neg">-$123</td>
+  <td class="neg">-0.01%</td>
+  <td>1433.82</td><td>1359.88</td>
+  <td>16.62</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2012-12-24</td><td>2013-01-18</td>
+  <td>1350</td><td>1265</td>
+  <td>3</td><td>$1,266</td>
+  <td class="pos">$1,266</td>
+  <td class="pos">0.13%</td>
+  <td>1426.66</td><td>1485.98</td>
+  <td>17.84</td><td>23</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2013-05-20</td><td>2013-06-21</td>
+  <td>1595</td><td>1530</td>
+  <td>1</td><td>$366</td>
+  <td class="pos">$109</td>
+  <td class="pos">0.01%</td>
+  <td>1666.29</td><td>1592.43</td>
+  <td>13.02</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2013-06-24</td><td>2013-07-19</td>
+  <td>1485</td><td>1400</td>
+  <td>2</td><td>$1,158</td>
+  <td class="pos">$1,158</td>
+  <td class="pos">0.12%</td>
+  <td>1573.09</td><td>1692.09</td>
+  <td>20.11</td><td>23</td>
+  <td>0.75</td>
+</tr>
+<tr>
+  <td>2013-09-23</td><td>2013-10-18</td>
+  <td>1635</td><td>1565</td>
+  <td>4</td><td>$1,572</td>
+  <td class="pos">$1,572</td>
+  <td class="pos">0.16%</td>
+  <td>1701.84</td><td>1744.50</td>
+  <td>14.31</td><td>23</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2013-10-21</td><td>2013-11-15</td>
+  <td>1680</td><td>1610</td>
+  <td>1</td><td>$324</td>
+  <td class="pos">$324</td>
+  <td class="pos">0.03%</td>
+  <td>1744.66</td><td>1798.18</td>
+  <td>13.16</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2013-11-18</td><td>2013-12-20</td>
+  <td>1715</td><td>1635</td>
+  <td>2</td><td>$771</td>
+  <td class="pos">$771</td>
+  <td class="pos">0.08%</td>
+  <td>1791.53</td><td>1818.32</td>
+  <td>13.10</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2013-12-23</td><td>2014-01-17</td>
+  <td>1765</td><td>1675</td>
+  <td>2</td><td>$702</td>
+  <td class="pos">$702</td>
+  <td class="pos">0.07%</td>
+  <td>1827.99</td><td>1838.70</td>
+  <td>13.04</td><td>23</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2014-01-21</td><td>2014-02-21</td>
+  <td>1765</td><td>1675</td>
+  <td>2</td><td>$771</td>
+  <td class="pos">$771</td>
+  <td class="pos">0.08%</td>
+  <td>1843.80</td><td>1836.25</td>
+  <td>12.87</td><td>29</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2014-03-24</td><td>2014-04-17</td>
+  <td>1780</td><td>1695</td>
+  <td>1</td><td>$424</td>
+  <td class="pos">$424</td>
+  <td class="pos">0.04%</td>
+  <td>1857.44</td><td>1864.85</td>
+  <td>15.09</td><td>23</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2014-04-21</td><td>2014-05-16</td>
+  <td>1800</td><td>1730</td>
+  <td>2</td><td>$800</td>
+  <td class="pos">$800</td>
+  <td class="pos">0.08%</td>
+  <td>1871.89</td><td>1877.86</td>
+  <td>13.25</td><td>26</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2014-07-21</td><td>2014-08-15</td>
+  <td>1900</td><td>1815</td>
+  <td>1</td><td>$388</td>
+  <td class="pos">$388</td>
+  <td class="pos">0.04%</td>
+  <td>1973.63</td><td>1955.06</td>
+  <td>12.81</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2014-08-18</td><td>2014-09-19</td>
+  <td>1890</td><td>1800</td>
+  <td>1</td><td>$459</td>
+  <td class="pos">$459</td>
+  <td class="pos">0.05%</td>
+  <td>1971.74</td><td>2010.40</td>
+  <td>12.32</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2014-09-22</td><td>2014-10-17</td>
+  <td>1915</td><td>1820</td>
+  <td>3</td><td>$1,189</td>
+  <td class="neg">-$7,283</td>
+  <td class="neg">-0.74%</td>
+  <td>1994.29</td><td>1886.76</td>
+  <td>13.69</td><td>23</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2014-10-20</td><td>2014-11-21</td>
+  <td>1785</td><td>1675</td>
+  <td>1</td><td>$742</td>
+  <td class="pos">$742</td>
+  <td class="pos">0.07%</td>
+  <td>1904.01</td><td>2063.50</td>
+  <td>18.57</td><td>30</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2014-12-22</td><td>2015-01-16</td>
+  <td>1990</td><td>1885</td>
+  <td>2</td><td>$989</td>
+  <td class="pos">$989</td>
+  <td class="pos">0.10%</td>
+  <td>2078.54</td><td>2019.42</td>
+  <td>15.25</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2015-02-23</td><td>2015-03-20</td>
+  <td>2025</td><td>1930</td>
+  <td>3</td><td>$1,479</td>
+  <td class="pos">$1,479</td>
+  <td class="pos">0.15%</td>
+  <td>2109.66</td><td>2108.10</td>
+  <td>14.56</td><td>23</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2015-03-23</td><td>2015-04-17</td>
+  <td>2025</td><td>1945</td>
+  <td>2</td><td>$830</td>
+  <td class="pos">$830</td>
+  <td class="pos">0.08%</td>
+  <td>2104.42</td><td>2081.18</td>
+  <td>13.41</td><td>23</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2015-04-20</td><td>2015-05-15</td>
+  <td>2020</td><td>1940</td>
+  <td>1</td><td>$482</td>
+  <td class="pos">$482</td>
+  <td class="pos">0.05%</td>
+  <td>2100.40</td><td>2122.73</td>
+  <td>13.30</td><td>30</td>
+  <td>0.34</td>
+</tr>
+<tr>
+  <td>2015-05-18</td><td>2015-06-19</td>
+  <td>2035</td><td>1940</td>
+  <td>1</td><td>$552</td>
+  <td class="pos">$552</td>
+  <td class="pos">0.06%</td>
+  <td>2129.20</td><td>2109.99</td>
+  <td>12.73</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2015-09-21</td><td>2015-10-16</td>
+  <td>1850</td><td>1740</td>
+  <td>2</td><td>$1,376</td>
+  <td class="pos">$1,376</td>
+  <td class="pos">0.14%</td>
+  <td>1966.97</td><td>2033.11</td>
+  <td>20.14</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2015-10-19</td><td>2015-11-20</td>
+  <td>1935</td><td>1830</td>
+  <td>1</td><td>$606</td>
+  <td class="pos">$606</td>
+  <td class="pos">0.06%</td>
+  <td>2033.66</td><td>2089.17</td>
+  <td>14.98</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2015-11-23</td><td>2015-12-18</td>
+  <td>1995</td><td>1900</td>
+  <td>1</td><td>$584</td>
+  <td class="pos">$584</td>
+  <td class="pos">0.06%</td>
+  <td>2086.59</td><td>2005.55</td>
+  <td>15.62</td><td>23</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2015-12-21</td><td>2016-01-15</td>
+  <td>1915</td><td>1815</td>
+  <td>2</td><td>$1,316</td>
+  <td class="neg">-$5,618</td>
+  <td class="neg">-0.57%</td>
+  <td>2021.15</td><td>1880.33</td>
+  <td>18.70</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2016-03-21</td><td>2016-04-15</td>
+  <td>1970</td><td>1925</td>
+  <td>1</td><td>$329</td>
+  <td class="pos">$329</td>
+  <td class="pos">0.03%</td>
+  <td>2051.60</td><td>2080.73</td>
+  <td>13.79</td><td>30</td>
+  <td>0.17</td>
+</tr>
+<tr>
+  <td>2016-05-23</td><td>2016-06-17</td>
+  <td>1960</td><td>1875</td>
+  <td>1</td><td>$529</td>
+  <td class="pos">$529</td>
+  <td class="pos">0.05%</td>
+  <td>2048.04</td><td>2071.22</td>
+  <td>15.82</td><td>23</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2016-06-20</td><td>2016-07-15</td>
+  <td>1975</td><td>1880</td>
+  <td>1</td><td>$618</td>
+  <td class="pos">$618</td>
+  <td class="pos">0.06%</td>
+  <td>2083.25</td><td>2161.74</td>
+  <td>18.37</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2016-09-19</td><td>2016-10-21</td>
+  <td>2030</td><td>1935</td>
+  <td>1</td><td>$608</td>
+  <td class="pos">$608</td>
+  <td class="pos">0.06%</td>
+  <td>2139.12</td><td>2141.16</td>
+  <td>15.53</td><td>30</td>
+  <td>0.34</td>
+</tr>
+<tr>
+  <td>2016-10-24</td><td>2016-11-18</td>
+  <td>2065</td><td>1980</td>
+  <td>1</td><td>$520</td>
+  <td class="pos">$520</td>
+  <td class="pos">0.05%</td>
+  <td>2151.33</td><td>2181.90</td>
+  <td>13.02</td><td>23</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2016-11-21</td><td>2016-12-16</td>
+  <td>2120</td><td>2050</td>
+  <td>1</td><td>$386</td>
+  <td class="pos">$386</td>
+  <td class="pos">0.04%</td>
+  <td>2198.18</td><td>2258.07</td>
+  <td>12.42</td><td>30</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2017-08-21</td><td>2017-09-15</td>
+  <td>2340</td><td>2240</td>
+  <td>1</td><td>$553</td>
+  <td class="pos">$553</td>
+  <td class="pos">0.06%</td>
+  <td>2428.37</td><td>2500.23</td>
+  <td>13.19</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2017-10-23</td><td>2017-11-17</td>
+  <td>2485</td><td>2390</td>
+  <td>1</td><td>$374</td>
+  <td class="pos">$374</td>
+  <td class="pos">0.04%</td>
+  <td>2564.98</td><td>2578.85</td>
+  <td>11.07</td><td>23</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2017-11-20</td><td>2017-12-15</td>
+  <td>2505</td><td>2435</td>
+  <td>1</td><td>$356</td>
+  <td class="pos">$356</td>
+  <td class="pos">0.04%</td>
+  <td>2582.14</td><td>2675.81</td>
+  <td>10.65</td><td>30</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2018-01-22</td><td>2018-02-16</td>
+  <td>2750</td><td>2655</td>
+  <td>1</td><td>$452</td>
+  <td class="neg">-$1,326</td>
+  <td class="neg">-0.13%</td>
+  <td>2832.97</td><td>2732.22</td>
+  <td>11.03</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2018-02-20</td><td>2018-03-16</td>
+  <td>2570</td><td>2425</td>
+  <td>1</td><td>$748</td>
+  <td class="pos">$748</td>
+  <td class="pos">0.08%</td>
+  <td>2716.26</td><td>2752.01</td>
+  <td>20.60</td><td>28</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2018-04-23</td><td>2018-05-18</td>
+  <td>2550</td><td>2420</td>
+  <td>1</td><td>$734</td>
+  <td class="pos">$734</td>
+  <td class="pos">0.07%</td>
+  <td>2670.29</td><td>2712.97</td>
+  <td>16.34</td><td>23</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2018-05-21</td><td>2018-06-15</td>
+  <td>2640</td><td>2525</td>
+  <td>2</td><td>$1,134</td>
+  <td class="pos">$1,134</td>
+  <td class="pos">0.11%</td>
+  <td>2733.01</td><td>2779.66</td>
+  <td>13.08</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2018-06-18</td><td>2018-07-20</td>
+  <td>2670</td><td>2575</td>
+  <td>1</td><td>$469</td>
+  <td class="pos">$469</td>
+  <td class="pos">0.05%</td>
+  <td>2773.75</td><td>2801.83</td>
+  <td>12.31</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2018-07-23</td><td>2018-08-17</td>
+  <td>2715</td><td>2585</td>
+  <td>1</td><td>$519</td>
+  <td class="pos">$519</td>
+  <td class="pos">0.05%</td>
+  <td>2806.98</td><td>2850.13</td>
+  <td>12.62</td><td>23</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2018-08-20</td><td>2018-09-21</td>
+  <td>2750</td><td>2650</td>
+  <td>1</td><td>$479</td>
+  <td class="pos">$479</td>
+  <td class="pos">0.05%</td>
+  <td>2857.05</td><td>2929.67</td>
+  <td>12.49</td><td>30</td>
+  <td>0.34</td>
+</tr>
+<tr>
+  <td>2018-09-24</td><td>2018-10-19</td>
+  <td>2825</td><td>2730</td>
+  <td>1</td><td>$455</td>
+  <td class="neg">-$5,267</td>
+  <td class="neg">-0.53%</td>
+  <td>2919.37</td><td>2767.78</td>
+  <td>12.20</td><td>23</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2018-10-22</td><td>2018-11-16</td>
+  <td>2605</td><td>2455</td>
+  <td>1</td><td>$896</td>
+  <td class="pos">$896</td>
+  <td class="pos">0.09%</td>
+  <td>2755.88</td><td>2736.27</td>
+  <td>19.64</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2018-11-19</td><td>2018-12-21</td>
+  <td>2520</td><td>2370</td>
+  <td>1</td><td>$1,084</td>
+  <td class="neg">-$9,254</td>
+  <td class="neg">-0.94%</td>
+  <td>2690.73</td><td>2416.62</td>
+  <td>20.10</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2018-12-24</td><td>2019-01-18</td>
+  <td>2130</td><td>1985</td>
+  <td>1</td><td>$1,191</td>
+  <td class="pos">$1,191</td>
+  <td class="pos">0.12%</td>
+  <td>2351.10</td><td>2670.71</td>
+  <td>36.07</td><td>23</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2019-01-22</td><td>2019-02-15</td>
+  <td>2480</td><td>2330</td>
+  <td>1</td><td>$902</td>
+  <td class="pos">$902</td>
+  <td class="pos">0.09%</td>
+  <td>2632.90</td><td>2775.60</td>
+  <td>20.80</td><td>29</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2019-02-19</td><td>2019-03-15</td>
+  <td>2670</td><td>2600</td>
+  <td>1</td><td>$465</td>
+  <td class="pos">$465</td>
+  <td class="pos">0.05%</td>
+  <td>2779.76</td><td>2822.48</td>
+  <td>14.88</td><td>28</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2019-03-18</td><td>2019-04-18</td>
+  <td>2720</td><td>2625</td>
+  <td>1</td><td>$585</td>
+  <td class="pos">$585</td>
+  <td class="pos">0.06%</td>
+  <td>2832.94</td><td>2905.03</td>
+  <td>13.10</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2019-05-20</td><td>2019-06-21</td>
+  <td>2690</td><td>2620</td>
+  <td>1</td><td>$629</td>
+  <td class="pos">$629</td>
+  <td class="pos">0.06%</td>
+  <td>2840.23</td><td>2950.46</td>
+  <td>16.31</td><td>30</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2019-06-24</td><td>2019-07-19</td>
+  <td>2820</td><td>2690</td>
+  <td>1</td><td>$759</td>
+  <td class="pos">$759</td>
+  <td class="pos">0.08%</td>
+  <td>2945.35</td><td>2976.61</td>
+  <td>15.26</td><td>23</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2019-07-22</td><td>2019-08-16</td>
+  <td>2875</td><td>2780</td>
+  <td>1</td><td>$582</td>
+  <td class="pos">$582</td>
+  <td class="pos">0.06%</td>
+  <td>2985.03</td><td>2888.68</td>
+  <td>13.53</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2019-10-21</td><td>2019-11-15</td>
+  <td>2890</td><td>2770</td>
+  <td>1</td><td>$739</td>
+  <td class="pos">$739</td>
+  <td class="pos">0.07%</td>
+  <td>3006.72</td><td>3120.46</td>
+  <td>14.00</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2019-11-18</td><td>2019-12-20</td>
+  <td>2990</td><td>2920</td>
+  <td>1</td><td>$513</td>
+  <td class="pos">$513</td>
+  <td class="pos">0.05%</td>
+  <td>3122.03</td><td>3221.22</td>
+  <td>12.46</td><td>30</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2019-12-23</td><td>2020-01-17</td>
+  <td>3105</td><td>3010</td>
+  <td>1</td><td>$489</td>
+  <td class="pos">$489</td>
+  <td class="pos">0.05%</td>
+  <td>3224.01</td><td>3329.62</td>
+  <td>12.61</td><td>23</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2020-02-24</td><td>2020-03-20</td>
+  <td>2995</td><td>2845</td>
+  <td>1</td><td>$1,114</td>
+  <td class="neg">-$13,886</td>
+  <td class="neg">-1.42%</td>
+  <td>3225.89</td><td>2304.92</td>
+  <td>25.03</td><td>23</td>
+  <td>0.75</td>
+</tr>
+<tr>
+  <td>2020-04-20</td><td>2020-05-15</td>
+  <td>2500</td><td>2350</td>
+  <td>1</td><td>$1,545</td>
+  <td class="pos">$1,545</td>
+  <td class="pos">0.16%</td>
+  <td>2823.16</td><td>2863.70</td>
+  <td>43.83</td><td>28</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2020-05-18</td><td>2020-06-19</td>
+  <td>2680</td><td>2530</td>
+  <td>1</td><td>$1,286</td>
+  <td class="pos">$1,286</td>
+  <td class="pos">0.13%</td>
+  <td>2953.91</td><td>3097.74</td>
+  <td>29.30</td><td>28</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2020-06-22</td><td>2020-07-17</td>
+  <td>2850</td><td>2700</td>
+  <td>1</td><td>$1,282</td>
+  <td class="pos">$1,282</td>
+  <td class="pos">0.13%</td>
+  <td>3117.86</td><td>3224.73</td>
+  <td>31.77</td><td>21</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2020-07-20</td><td>2020-08-21</td>
+  <td>3005</td><td>2855</td>
+  <td>1</td><td>$1,139</td>
+  <td class="pos">$1,139</td>
+  <td class="pos">0.12%</td>
+  <td>3251.84</td><td>3397.16</td>
+  <td>24.46</td><td>28</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2020-08-24</td><td>2020-09-18</td>
+  <td>3225</td><td>3075</td>
+  <td>1</td><td>$919</td>
+  <td class="pos">$919</td>
+  <td class="pos">0.09%</td>
+  <td>3431.28</td><td>3319.47</td>
+  <td>22.37</td><td>21</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2020-09-21</td><td>2020-10-16</td>
+  <td>3040</td><td>2890</td>
+  <td>1</td><td>$1,244</td>
+  <td class="pos">$1,244</td>
+  <td class="pos">0.13%</td>
+  <td>3281.06</td><td>3483.81</td>
+  <td>27.78</td><td>28</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2020-10-19</td><td>2020-11-20</td>
+  <td>3115</td><td>2970</td>
+  <td>1</td><td>$1,408</td>
+  <td class="pos">$1,408</td>
+  <td class="pos">0.14%</td>
+  <td>3426.92</td><td>3557.54</td>
+  <td>29.18</td><td>28</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2020-11-23</td><td>2020-12-18</td>
+  <td>3350</td><td>3255</td>
+  <td>1</td><td>$772</td>
+  <td class="pos">$772</td>
+  <td class="pos">0.08%</td>
+  <td>3577.59</td><td>3709.41</td>
+  <td>22.66</td><td>21</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2020-12-21</td><td>2021-01-15</td>
+  <td>3440</td><td>3395</td>
+  <td>1</td><td>$428</td>
+  <td class="pos">$428</td>
+  <td class="pos">0.04%</td>
+  <td>3694.92</td><td>3768.25</td>
+  <td>25.16</td><td>29</td>
+  <td>0.17</td>
+</tr>
+<tr>
+  <td>2021-01-19</td><td>2021-02-19</td>
+  <td>3525</td><td>3430</td>
+  <td>1</td><td>$800</td>
+  <td class="pos">$800</td>
+  <td class="pos">0.08%</td>
+  <td>3798.91</td><td>3906.71</td>
+  <td>23.24</td><td>28</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2021-02-22</td><td>2021-03-19</td>
+  <td>3620</td><td>3525</td>
+  <td>1</td><td>$782</td>
+  <td class="pos">$782</td>
+  <td class="pos">0.08%</td>
+  <td>3876.50</td><td>3913.10</td>
+  <td>23.45</td><td>21</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2021-07-19</td><td>2021-08-20</td>
+  <td>3950</td><td>3900</td>
+  <td>1</td><td>$466</td>
+  <td class="pos">$466</td>
+  <td class="pos">0.05%</td>
+  <td>4258.49</td><td>4441.67</td>
+  <td>22.50</td><td>28</td>
+  <td>0.19</td>
+</tr>
+<tr>
+  <td>2021-11-22</td><td>2021-12-17</td>
+  <td>4430</td><td>4335</td>
+  <td>1</td><td>$695</td>
+  <td class="pos">$695</td>
+  <td class="pos">0.07%</td>
+  <td>4682.94</td><td>4620.64</td>
+  <td>19.17</td><td>21</td>
+  <td>0.34</td>
+</tr>
+<tr>
+  <td>2021-12-20</td><td>2022-01-21</td>
+  <td>4240</td><td>4090</td>
+  <td>1</td><td>$1,254</td>
+  <td class="pos">$1,254</td>
+  <td class="pos">0.13%</td>
+  <td>4568.02</td><td>4397.94</td>
+  <td>22.87</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2022-02-22</td><td>2022-03-18</td>
+  <td>3970</td><td>3820</td>
+  <td>1</td><td>$1,454</td>
+  <td class="pos">$1,454</td>
+  <td class="pos">0.15%</td>
+  <td>4304.76</td><td>4463.12</td>
+  <td>28.81</td><td>30</td>
+  <td>0.56</td>
+</tr>
+<tr>
+  <td>2022-03-21</td><td>2022-04-14</td>
+  <td>4170</td><td>4020</td>
+  <td>1</td><td>$1,214</td>
+  <td class="pos">$1,214</td>
+  <td class="pos">0.12%</td>
+  <td>4461.18</td><td>4392.59</td>
+  <td>23.53</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2022-04-18</td><td>2022-05-20</td>
+  <td>4085</td><td>3935</td>
+  <td>1</td><td>$1,384</td>
+  <td class="neg">-$13,616</td>
+  <td class="neg">-1.39%</td>
+  <td>4391.69</td><td>3901.36</td>
+  <td>22.17</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2022-05-23</td><td>2022-06-17</td>
+  <td>3675</td><td>3525</td>
+  <td>1</td><td>$1,484</td>
+  <td class="pos">$1,468</td>
+  <td class="pos">0.15%</td>
+  <td>3973.75</td><td>3674.84</td>
+  <td>28.48</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2022-06-21</td><td>2022-07-15</td>
+  <td>3485</td><td>3335</td>
+  <td>1</td><td>$1,350</td>
+  <td class="pos">$1,350</td>
+  <td class="pos">0.14%</td>
+  <td>3764.79</td><td>3863.16</td>
+  <td>30.19</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2022-07-18</td><td>2022-08-19</td>
+  <td>3540</td><td>3390</td>
+  <td>1</td><td>$1,512</td>
+  <td class="pos">$1,512</td>
+  <td class="pos">0.15%</td>
+  <td>3830.85</td><td>4228.48</td>
+  <td>25.30</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2022-08-22</td><td>2022-09-16</td>
+  <td>3885</td><td>3815</td>
+  <td>1</td><td>$702</td>
+  <td class="neg">-$465</td>
+  <td class="neg">-0.05%</td>
+  <td>4137.99</td><td>3873.33</td>
+  <td>23.80</td><td>30</td>
+  <td>0.25</td>
+</tr>
+<tr>
+  <td>2022-09-19</td><td>2022-10-21</td>
+  <td>3610</td><td>3515</td>
+  <td>1</td><td>$1,066</td>
+  <td class="pos">$1,066</td>
+  <td class="pos">0.11%</td>
+  <td>3899.89</td><td>3752.75</td>
+  <td>25.76</td><td>30</td>
+  <td>0.33</td>
+</tr>
+<tr>
+  <td>2022-10-24</td><td>2022-11-18</td>
+  <td>3515</td><td>3365</td>
+  <td>1</td><td>$1,542</td>
+  <td class="pos">$1,542</td>
+  <td class="pos">0.16%</td>
+  <td>3797.34</td><td>3965.34</td>
+  <td>29.85</td><td>30</td>
+  <td>1.00</td>
+</tr>
+<tr>
+  <td>2022-11-21</td><td>2022-12-16</td>
+  <td>3725</td><td>3580</td>
+  <td>1</td><td>$1,315</td>
+  <td class="pos">$1,315</td>
+  <td class="pos">0.13%</td>
+  <td>3949.94</td><td>3852.36</td>
+  <td>22.36</td><td>30</td>
+  <td>0.50</td>
+</tr>
+<tr>
+  <td>2022-12-19</td><td>2023-01-20</td>
+  <td>3585</td><td>3435</td>
+  <td>1</td><td>$1,352</td>
+  <td class="pos">$1,352</td>
+  <td class="pos">0.14%</td>
+  <td>3817.66</td><td>3972.61</td>
+  <td>22.42</td><td>30</td>
+  <td>0.67</td>
+</tr>
+<tr>
+  <td>2023-02-21</td><td>2023-03-15</td>
+  <td>3770</td><td>3675</td>
+  <td>1</td><td>$939</td>
+  <td class="pos">$939</td>
+  <td class="pos">0.09%</td>
+  <td>3997.34</td><td>3891.93</td>
+  <td>22.87</td><td>30</td>
+  <td>0.34</td>
+</tr>
+</tbody></table>
+
+<p style="color:#475569; font-size:0.8em; margin-top:40px;">
+  Generated by VRP Backtest System. All P&amp;L figures in USD. Statistics recalculated from trade-level data.
+</p>
+
+<script>
+var darkLayout = {
+  paper_bgcolor: '#1e293b',
+  plot_bgcolor: '#1e293b',
+  font: { color: '#cbd5e1', family: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif' },
+  xaxis: { gridcolor: '#334155', linecolor: '#475569', zerolinecolor: '#475569' },
+  yaxis: { gridcolor: '#334155', linecolor: '#475569', zerolinecolor: '#475569' },
+  margin: { l: 60, r: 30, t: 50, b: 50 }
+};
+
+Plotly.newPlot('chart_equity', [
+  {
+    x: ["2011-07-18", "2011-08-19", "2011-09-16", "2011-10-21", "2011-11-18", "2011-12-16", "2012-02-17", "2012-03-16", "2012-05-18", "2012-06-15", "2012-08-17", "2012-11-16", "2013-01-18", "2013-06-21", "2013-07-19", "2013-10-18", "2013-11-15", "2013-12-20", "2014-01-17", "2014-02-21", "2014-04-17", "2014-05-16", "2014-08-15", "2014-09-19", "2014-10-17", "2014-11-21", "2015-01-16", "2015-03-20", "2015-04-17", "2015-05-15", "2015-06-19", "2015-10-16", "2015-11-20", "2015-12-18", "2016-01-15", "2016-04-15", "2016-06-17", "2016-07-15", "2016-10-21", "2016-11-18", "2016-12-16", "2017-09-15", "2017-11-17", "2017-12-15", "2018-02-16", "2018-03-16", "2018-05-18", "2018-06-15", "2018-07-20", "2018-08-17", "2018-09-21", "2018-10-19", "2018-11-16", "2018-12-21", "2019-01-18", "2019-02-15", "2019-03-15", "2019-04-18", "2019-06-21", "2019-07-19", "2019-08-16", "2019-11-15", "2019-12-20", "2020-01-17", "2020-03-20", "2020-05-15", "2020-06-19", "2020-07-17", "2020-08-21", "2020-09-18", "2020-10-16", "2020-11-20", "2020-12-18", "2021-01-15", "2021-02-19", "2021-03-19", "2021-08-20", "2021-12-17", "2022-01-21", "2022-03-18", "2022-04-14", "2022-05-20", "2022-06-17", "2022-07-15", "2022-08-19", "2022-09-16", "2022-10-21", "2022-11-18", "2022-12-16", "2023-01-20", "2023-03-15"],
+    y: [1000000, 982747.0, 983250.0, 984779.0, 986031.0, 986637.0, 986991.0, 987316.0, 987707.0, 987971.0, 988377.0, 988254.0, 989520.0, 989629.0, 990787.0, 992359.0, 992683.0, 993454.0, 994156.0, 994927.0, 995351.0, 996151.0, 996539.0, 996998.0, 989715.0, 990457.0, 991446.0, 992925.0, 993755.0, 994237.0, 994789.0, 996165.0, 996771.0, 997355.0, 991737.0, 992066.0, 992595.0, 993213.0, 993821.0, 994341.0, 994727.0, 995280.0, 995654.0, 996010.0, 994684.0, 995432.0, 996166.0, 997300.0, 997769.0, 998288.0, 998767.0, 993500.0, 994396.0, 985142.0, 986333.0, 987235.0, 987700.0, 988285.0, 988914.0, 989673.0, 990255.0, 990994.0, 991507.0, 991996.0, 978110.0, 979655.0, 980941.0, 982223.0, 983362.0, 984281.0, 985525.0, 986933.0, 987705.0, 988133.0, 988933.0, 989715.0, 990181.0, 990876.0, 992130.0, 993584.0, 994798.0, 981182.0, 982650.0, 984000.0, 985512.0, 985047.0, 986113.0, 987655.0, 988970.0, 990322.0, 991261.0],
+    type: 'scatter', mode: 'lines',
+    name: 'NAV',
+    line: { color: '#3b82f6', width: 2 },
+    xaxis: 'x', yaxis: 'y'
+  },
+  {
+    x: ["2011-07-18", "2011-08-19", "2011-09-16", "2011-10-21", "2011-11-18", "2011-12-16", "2012-02-17", "2012-03-16", "2012-05-18", "2012-06-15", "2012-08-17", "2012-11-16", "2013-01-18", "2013-06-21", "2013-07-19", "2013-10-18", "2013-11-15", "2013-12-20", "2014-01-17", "2014-02-21", "2014-04-17", "2014-05-16", "2014-08-15", "2014-09-19", "2014-10-17", "2014-11-21", "2015-01-16", "2015-03-20", "2015-04-17", "2015-05-15", "2015-06-19", "2015-10-16", "2015-11-20", "2015-12-18", "2016-01-15", "2016-04-15", "2016-06-17", "2016-07-15", "2016-10-21", "2016-11-18", "2016-12-16", "2017-09-15", "2017-11-17", "2017-12-15", "2018-02-16", "2018-03-16", "2018-05-18", "2018-06-15", "2018-07-20", "2018-08-17", "2018-09-21", "2018-10-19", "2018-11-16", "2018-12-21", "2019-01-18", "2019-02-15", "2019-03-15", "2019-04-18", "2019-06-21", "2019-07-19", "2019-08-16", "2019-11-15", "2019-12-20", "2020-01-17", "2020-03-20", "2020-05-15", "2020-06-19", "2020-07-17", "2020-08-21", "2020-09-18", "2020-10-16", "2020-11-20", "2020-12-18", "2021-01-15", "2021-02-19", "2021-03-19", "2021-08-20", "2021-12-17", "2022-01-21", "2022-03-18", "2022-04-14", "2022-05-20", "2022-06-17", "2022-07-15", "2022-08-19", "2022-09-16", "2022-10-21", "2022-11-18", "2022-12-16", "2023-01-20", "2023-03-15"],
+    y: [0.0, -1.7253, -1.675, -1.5221, -1.3969, -1.3363, -1.3009, -1.2684, -1.2293, -1.2029, -1.1623, -1.1746, -1.048, -1.0371, -0.9213, -0.7641, -0.7317, -0.6546, -0.5844, -0.5073, -0.4649, -0.3849, -0.3461, -0.3002, -1.0285, -0.9543, -0.8554, -0.7075, -0.6245, -0.5763, -0.5211, -0.3835, -0.3229, -0.2645, -0.8263, -0.7934, -0.7405, -0.6787, -0.6179, -0.5659, -0.5273, -0.472, -0.4346, -0.399, -0.5316, -0.4568, -0.3834, -0.27, -0.2231, -0.1712, -0.1233, -0.65, -0.5604, -1.4858, -1.3667, -1.2765, -1.23, -1.1715, -1.1086, -1.0327, -0.9745, -0.9006, -0.8493, -0.8004, -2.189, -2.0345, -1.9059, -1.7777, -1.6638, -1.5719, -1.4475, -1.3067, -1.2295, -1.1867, -1.1067, -1.0285, -0.9819, -0.9124, -0.787, -0.6416, -0.5202, -1.8818, -1.735, -1.6, -1.4488, -1.4953, -1.3887, -1.2345, -1.103, -0.9678, -0.8739],
+    type: 'scatter', mode: 'lines',
+    fill: 'tozeroy', fillcolor: 'rgba(239,68,68,0.2)',
+    name: 'Drawdown',
+    line: { color: '#ef4444', width: 1.5 },
+    xaxis: 'x2', yaxis: 'y2'
+  }
+], {
+  ...darkLayout,
+  title: { text: 'Portfolio Equity & Drawdown', font: { size: 15, color: '#f1f5f9' } },
+  height: 550,
+  showlegend: true,
+  legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(0,0,0,0)' },
+  xaxis:  { anchor: 'y', domain: [0,1], showticklabels: false, gridcolor: '#334155', matches: 'x2' },
+  yaxis:  { anchor: 'x', domain: [0.32, 1], title: 'NAV ($)', gridcolor: '#334155', linecolor: '#475569', tickformat: '$,.0f' },
+  xaxis2: { anchor: 'y2', domain: [0,1], gridcolor: '#334155', linecolor: '#475569' },
+  yaxis2: { anchor: 'x2', domain: [0, 0.24], title: 'Drawdown (%)', gridcolor: '#334155', linecolor: '#475569', ticksuffix: '%' },
+  grid: { rows: 2, columns: 1, subplots: [['xy'],['x2y2']] }
+}, { responsive: true });
+
+Plotly.newPlot('chart_trades', [{
+  x: ["2011-07-18", "2011-08-22", "2011-09-19", "2011-10-24", "2011-11-21", "2012-01-23", "2012-02-21", "2012-04-23", "2012-05-21", "2012-07-23", "2012-10-22", "2012-12-24", "2013-05-20", "2013-06-24", "2013-09-23", "2013-10-21", "2013-11-18", "2013-12-23", "2014-01-21", "2014-03-24", "2014-04-21", "2014-07-21", "2014-08-18", "2014-09-22", "2014-10-20", "2014-12-22", "2015-02-23", "2015-03-23", "2015-04-20", "2015-05-18", "2015-09-21", "2015-10-19", "2015-11-23", "2015-12-21", "2016-03-21", "2016-05-23", "2016-06-20", "2016-09-19", "2016-10-24", "2016-11-21", "2017-08-21", "2017-10-23", "2017-11-20", "2018-01-22", "2018-02-20", "2018-04-23", "2018-05-21", "2018-06-18", "2018-07-23", "2018-08-20", "2018-09-24", "2018-10-22", "2018-11-19", "2018-12-24", "2019-01-22", "2019-02-19", "2019-03-18", "2019-05-20", "2019-06-24", "2019-07-22", "2019-10-21", "2019-11-18", "2019-12-23", "2020-02-24", "2020-04-20", "2020-05-18", "2020-06-22", "2020-07-20", "2020-08-24", "2020-09-21", "2020-10-19", "2020-11-23", "2020-12-21", "2021-01-19", "2021-02-22", "2021-07-19", "2021-11-22", "2021-12-20", "2022-02-22", "2022-03-21", "2022-04-18", "2022-05-23", "2022-06-21", "2022-07-18", "2022-08-22", "2022-09-19", "2022-10-24", "2022-11-21", "2022-12-19", "2023-02-21"],
+  y: [-17253.0, 503.0, 1529.0, 1252.0, 606.0, 354.0, 325.0, 391.0, 264.0, 406.0, -123.0, 1266.0, 109.0, 1158.0, 1572.0, 324.0, 771.0, 702.0, 771.0, 424.0, 800.0, 388.0, 459.0, -7283.0, 742.0, 989.0, 1479.0, 830.0, 482.0, 552.0, 1376.0, 606.0, 584.0, -5618.0, 329.0, 529.0, 618.0, 608.0, 520.0, 386.0, 553.0, 374.0, 356.0, -1326.0, 748.0, 734.0, 1134.0, 469.0, 519.0, 479.0, -5267.0, 896.0, -9254.0, 1191.0, 902.0, 465.0, 585.0, 629.0, 759.0, 582.0, 739.0, 513.0, 489.0, -13886.0, 1545.0, 1286.0, 1282.0, 1139.0, 919.0, 1244.0, 1408.0, 772.0, 428.0, 800.0, 782.0, 466.0, 695.0, 1254.0, 1454.0, 1214.0, -13616.0, 1468.0, 1350.0, 1512.0, -465.0, 1066.0, 1542.0, 1315.0, 1352.0, 939.0],
+  type: 'bar',
+  name: 'Trade P&L',
+  marker: { color: ["#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#dc2626", "#16a34a", "#16a34a", "#16a34a", "#16a34a", "#16a34a"] }
+}], {
+  ...darkLayout,
+  title: { text: 'Individual Trade P&L', font: { size: 15, color: '#f1f5f9' } },
+  height: 380,
+  xaxis: { ...darkLayout.xaxis, title: 'Entry Date' },
+  yaxis: { ...darkLayout.yaxis, title: 'P&L ($)', tickformat: '$,.0f' }
+}, { responsive: true });
+
+Plotly.newPlot('chart_cumpnl', [{
+  x: ["2011-07-18", "2011-08-22", "2011-09-19", "2011-10-24", "2011-11-21", "2012-01-23", "2012-02-21", "2012-04-23", "2012-05-21", "2012-07-23", "2012-10-22", "2012-12-24", "2013-05-20", "2013-06-24", "2013-09-23", "2013-10-21", "2013-11-18", "2013-12-23", "2014-01-21", "2014-03-24", "2014-04-21", "2014-07-21", "2014-08-18", "2014-09-22", "2014-10-20", "2014-12-22", "2015-02-23", "2015-03-23", "2015-04-20", "2015-05-18", "2015-09-21", "2015-10-19", "2015-11-23", "2015-12-21", "2016-03-21", "2016-05-23", "2016-06-20", "2016-09-19", "2016-10-24", "2016-11-21", "2017-08-21", "2017-10-23", "2017-11-20", "2018-01-22", "2018-02-20", "2018-04-23", "2018-05-21", "2018-06-18", "2018-07-23", "2018-08-20", "2018-09-24", "2018-10-22", "2018-11-19", "2018-12-24", "2019-01-22", "2019-02-19", "2019-03-18", "2019-05-20", "2019-06-24", "2019-07-22", "2019-10-21", "2019-11-18", "2019-12-23", "2020-02-24", "2020-04-20", "2020-05-18", "2020-06-22", "2020-07-20", "2020-08-24", "2020-09-21", "2020-10-19", "2020-11-23", "2020-12-21", "2021-01-19", "2021-02-22", "2021-07-19", "2021-11-22", "2021-12-20", "2022-02-22", "2022-03-21", "2022-04-18", "2022-05-23", "2022-06-21", "2022-07-18", "2022-08-22", "2022-09-19", "2022-10-24", "2022-11-21", "2022-12-19", "2023-02-21"],
+  y: [-17253.0, -16750.0, -15221.0, -13969.0, -13363.0, -13009.0, -12684.0, -12293.0, -12029.0, -11623.0, -11746.0, -10480.0, -10371.0, -9213.0, -7641.0, -7317.0, -6546.0, -5844.0, -5073.0, -4649.0, -3849.0, -3461.0, -3002.0, -10285.0, -9543.0, -8554.0, -7075.0, -6245.0, -5763.0, -5211.0, -3835.0, -3229.0, -2645.0, -8263.0, -7934.0, -7405.0, -6787.0, -6179.0, -5659.0, -5273.0, -4720.0, -4346.0, -3990.0, -5316.0, -4568.0, -3834.0, -2700.0, -2231.0, -1712.0, -1233.0, -6500.0, -5604.0, -14858.0, -13667.0, -12765.0, -12300.0, -11715.0, -11086.0, -10327.0, -9745.0, -9006.0, -8493.0, -8004.0, -21890.0, -20345.0, -19059.0, -17777.0, -16638.0, -15719.0, -14475.0, -13067.0, -12295.0, -11867.0, -11067.0, -10285.0, -9819.0, -9124.0, -7870.0, -6416.0, -5202.0, -18818.0, -17350.0, -16000.0, -14488.0, -14953.0, -13887.0, -12345.0, -11030.0, -9678.0, -8739.0],
+  type: 'scatter', mode: 'lines+markers',
+  name: 'Cumulative P&L',
+  line: { color: '#8b5cf6', width: 2 },
+  marker: { size: 4, color: '#8b5cf6' }
+}], {
+  ...darkLayout,
+  title: { text: 'Cumulative Trade P&L', font: { size: 15, color: '#f1f5f9' } },
+  height: 380,
+  xaxis: { ...darkLayout.xaxis, title: 'Entry Date' },
+  yaxis: { ...darkLayout.yaxis, title: 'Cumulative P&L ($)', tickformat: '$,.0f' },
+  shapes: [{ type: 'line', x0: '2011-07-18', x1: '2023-02-21',
+              y0: 0, y1: 0, line: { color: '#475569', width: 1, dash: 'dash' } }]
+}, { responsive: true });
+
+Plotly.newPlot('chart_heatmap', [{
+  x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  y: ["2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023"],
+  z: [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -17253.0, 503.0, 1529.0, 1252.0, 606.0], [0.0, 354.0, 325.0, 0.0, 391.0, 264.0, 0.0, 406.0, 0.0, 0.0, -123.0, 0.0], [1266.0, 0.0, 0.0, 0.0, 0.0, 109.0, 1158.0, 0.0, 0.0, 1572.0, 324.0, 771.0], [702.0, 771.0, 0.0, 424.0, 800.0, 0.0, 0.0, 388.0, 459.0, -7283.0, 742.0, 0.0], [989.0, 0.0, 1479.0, 830.0, 482.0, 552.0, 0.0, 0.0, 0.0, 1376.0, 606.0, 584.0], [-5618.0, 0.0, 0.0, 329.0, 0.0, 529.0, 618.0, 0.0, 0.0, 608.0, 520.0, 386.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 553.0, 0.0, 374.0, 356.0], [0.0, -1326.0, 748.0, 0.0, 734.0, 1134.0, 469.0, 519.0, 479.0, -5267.0, 896.0, -9254.0], [1191.0, 902.0, 465.0, 585.0, 0.0, 629.0, 759.0, 582.0, 0.0, 0.0, 739.0, 513.0], [489.0, 0.0, -13886.0, 0.0, 1545.0, 1286.0, 1282.0, 1139.0, 919.0, 1244.0, 1408.0, 772.0], [428.0, 800.0, 782.0, 0.0, 0.0, 0.0, 0.0, 466.0, 0.0, 0.0, 0.0, 695.0], [1254.0, 0.0, 1454.0, 1214.0, -13616.0, 1468.0, 1350.0, 1512.0, -465.0, 1066.0, 1542.0, 1315.0], [1352.0, 0.0, 939.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
+  text: [["$0", "$0", "$0", "$0", "$0", "$0", "$0", "$-17,253", "$503", "$1,529", "$1,252", "$606"], ["$0", "$354", "$325", "$0", "$391", "$264", "$0", "$406", "$0", "$0", "$-123", "$0"], ["$1,266", "$0", "$0", "$0", "$0", "$109", "$1,158", "$0", "$0", "$1,572", "$324", "$771"], ["$702", "$771", "$0", "$424", "$800", "$0", "$0", "$388", "$459", "$-7,283", "$742", "$0"], ["$989", "$0", "$1,479", "$830", "$482", "$552", "$0", "$0", "$0", "$1,376", "$606", "$584"], ["$-5,618", "$0", "$0", "$329", "$0", "$529", "$618", "$0", "$0", "$608", "$520", "$386"], ["$0", "$0", "$0", "$0", "$0", "$0", "$0", "$0", "$553", "$0", "$374", "$356"], ["$0", "$-1,326", "$748", "$0", "$734", "$1,134", "$469", "$519", "$479", "$-5,267", "$896", "$-9,254"], ["$1,191", "$902", "$465", "$585", "$0", "$629", "$759", "$582", "$0", "$0", "$739", "$513"], ["$489", "$0", "$-13,886", "$0", "$1,545", "$1,286", "$1,282", "$1,139", "$919", "$1,244", "$1,408", "$772"], ["$428", "$800", "$782", "$0", "$0", "$0", "$0", "$466", "$0", "$0", "$0", "$695"], ["$1,254", "$0", "$1,454", "$1,214", "$-13,616", "$1,468", "$1,350", "$1,512", "$-465", "$1,066", "$1,542", "$1,315"], ["$1,352", "$0", "$939", "$0", "$0", "$0", "$0", "$0", "$0", "$0", "$0", "$0"]],
+  texttemplate: '%{text}',
+  textfont: { size: 10, color: '#e2e8f0' },
+  type: 'heatmap',
+  colorscale: [
+    [0.0, '#991b1b'], [0.3, '#dc2626'], [0.45, '#fca5a5'],
+    [0.5, '#334155'],
+    [0.55, '#86efac'], [0.7, '#16a34a'], [1.0, '#14532d']
+  ],
+  zmid: 0,
+  colorbar: { tickformat: '$,.0f', title: 'P&L', titlefont: { color: '#94a3b8' }, tickfont: { color: '#94a3b8' } }
+}], {
+  ...darkLayout,
+  title: { text: 'Monthly P&L Heatmap', font: { size: 15, color: '#f1f5f9' } },
+  height: 420,
+  xaxis: { ...darkLayout.xaxis, side: 'top' },
+  yaxis: { ...darkLayout.yaxis, autorange: 'reversed' }
+}, { responsive: true });
+
+Plotly.newPlot('chart_dist', [{
+  x: [-1.7253, 0.05118306135760273, 0.15550470378845666, 0.12713512371811342, 0.06145851398181193, 0.035879457186381615, 0.0329283651016068, 0.03960231577326813, 0.026728574364664824, 0.04109432361881067, -0.012444644098355183, 0.12810471801783752, 0.011015441830382408, 0.11701354750113427, 0.15866175070928465, 0.03264947463569132, 0.07766829894336863, 0.07066255709876854, 0.07755322102366229, 0.04261619194172035, 0.0803736571320067, 0.03894991823528762, 0.04605941162362938, -0.7304929398052955, 0.07497107753242095, 0.09985289618832519, 0.14917605194836633, 0.08359140922023314, 0.048502900614336535, 0.055519961538345486, 0.1383207896347869, 0.06083329568896719, 0.05858918447667518, -0.5632899017902352, 0.03317411773484301, 0.05332306519929118, 0.06226104302358968, 0.06121546939075505, 0.052323305705957106, 0.038819680572358975, 0.05559314264114676, 0.03757736516357206, 0.03575539293770727, -0.13313119346191304, 0.0751997619344435, 0.0737368298387032, 0.11383644894525612, 0.0470269728266319, 0.05201604780264771, 0.047982145432981266, -0.5273502228247429, 0.09018621036738803, -0.9306151673980989, 0.12089627688191143, 0.09144984503205307, 0.04710124742335918, 0.059228510681380984, 0.06364560830124913, 0.0767508600343407, 0.05880730301826967, 0.0746272424779476, 0.05176620645533676, 0.0493188651214767, -1.3998040314678688, 0.15795769391990674, 0.1312707024411655, 0.13069083665582332, 0.11596144663686353, 0.093454902670634, 0.12638667209871976, 0.14286801451003273, 0.07822212855381268, 0.04333277648690652, 0.08096076135499979, 0.07907512440175421, 0.047084261630873536, 0.07018918763337208, 0.12655468494544223, 0.14655337506173585, 0.12218393210840756, -1.3687200818658662, 0.14961546379774598, 0.1373836055564036, 0.15365853658536585, -0.047183595937949005, 0.1082181865433832, 0.1563715314573482, 0.13314365846373483, 0.13670788800469175, 0.09481764516995482],
+  type: 'histogram',
+  nbinsx: 30,
+  name: 'Monthly Returns',
+  marker: { color: '#3b82f6', opacity: 0.75, line: { color: '#60a5fa', width: 1 } }
+}], {
+  ...darkLayout,
+  title: { text: 'Monthly Return Distribution', font: { size: 15, color: '#f1f5f9' } },
+  height: 380,
+  xaxis: { ...darkLayout.xaxis, title: 'Return (%)', ticksuffix: '%' },
+  yaxis: { ...darkLayout.yaxis, title: 'Frequency' },
+  shapes: [{ type: 'line', x0: 0, x1: 0, y0: 0, y1: 1, yref: 'paper',
+              line: { color: '#f87171', width: 1.5, dash: 'dash' } }]
+}, { responsive: true });
+
+</script>
+</body>
+</html>
