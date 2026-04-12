@@ -1,12 +1,30 @@
-Hierarchical Machine Learning for Variance Risk Premium Estimation
+# Hierarchical Machine Learning for Variance Risk Premium Estimation
+
 Hierarchical XGBoost pipeline forecasting VIX and realised volatility to estimate variance risk premium and systematically trade SPX bull put spreads.
-Key Results
-MetricValueTotal Return53.0%Sharpe Ratio1.24Hit Rate94.1%Number of Trades68
-Forecasting Performance
-ModelRMSEDirectional AccuracyVIX (XGBoost)1.88656.7%Realised Volatility7.49-
-Project Overview
+
+## Key Results
+
+| Metric | Value |
+|--------|-------|
+| Total Return | 53.0% |
+| Sharpe Ratio | 1.24 |
+| Hit Rate | 94.1% |
+| Number of Trades | 68 |
+
+### Forecasting Performance
+
+| Model | RMSE | Directional Accuracy |
+|-------|------|---------------------|
+| VIX (XGBoost) | 1.886 | 56.7% |
+| Realised Volatility | 7.49 | - |
+
+## Project Overview
+
 The variance risk premium (VRP) is the difference between implied volatility (VIX) and subsequent realised volatility. This project builds a two-stage hierarchical model to forecast VRP and exploit it through systematic options trading.
-Pipeline Architecture
+
+### Pipeline Architecture
+
+```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        STAGE 1: FORECASTING                     │
 ├────────────────────────────┬────────────────────────────────────┤
@@ -29,16 +47,45 @@ Pipeline Architecture
 │            SPX Bull Put Spreads                                 │
 │            Signal: VRP > threshold                              │
 └─────────────────────────────────────────────────────────────────┘
-Repository Structure
+```
+
+## Repository Structure
+
+```
 ├── r-forecasting/           # R code for VIX and RV forecasting
 ├── python-backtester/       # Python backtesting engine
 ├── thesis/                  # LaTeX dissertation source
 └── presentation/            # Beamer slides
-r-forecasting/
+```
+
+### r-forecasting/
+
 Core forecasting pipeline built in R with XGBoost, featuring purged expanding-window cross-validation and Bayesian hyperparameter optimisation.
-FileDescriptionSetup.RPackage loading and environment configurationData Download.RFetches VIX, SPX, and options dataData Prep and Exploration.RInitial cleaning and EDACBOE VIX Construction.RReplicates CBOE VIX methodologyRealised Volatility Construction.RBuilds RV using five OHLC estimatorsRealised Volatility Exploratory Data Analysis.RRV distributional analysisFeature Engineering.R150+ features for VIX forecastingRV Feature Engineering.RFeature set for RV modelXGBOOST Regression.RVIX point forecast modelXGBOOST Classification.RVIX direction classificationRV XGBOOST Regression.R22-day RV forecast modelRV XGBOOST Classification.RRV direction classificationHAR GARCH Models.RBenchmark models (HAR-RV, GARCH family)Combination Prediction for VRP from VIX and RV Predictions.RHierarchical VRP estimationVolatility Risk Premium Exploratory Analysis.RVRP characteristics and regime analysisTotal Model Assessment.RFinal model evaluation and SHAP analysis
-python-backtester/
+
+| File | Description |
+|------|-------------|
+| `Setup.R` | Package loading and environment configuration |
+| `Data Download.R` | Fetches VIX, SPX, and options data |
+| `Data Prep and Exploration.R` | Initial cleaning and EDA |
+| `CBOE VIX Construction.R` | Replicates CBOE VIX methodology |
+| `Realised Volatility Construction.R` | Builds RV using five OHLC estimators |
+| `Realised Volatility Exploratory Data Analysis.R` | RV distributional analysis |
+| `Feature Engineering.R` | 150+ features for VIX forecasting |
+| `RV Feature Engineering.R` | Feature set for RV model |
+| `XGBOOST Regression.R` | VIX point forecast model |
+| `XGBOOST Classification.R` | VIX direction classification |
+| `RV XGBOOST Regression.R` | 22-day RV forecast model |
+| `RV XGBOOST Classification.R` | RV direction classification |
+| `HAR GARCH Models.R` | Benchmark models (HAR-RV, GARCH family) |
+| `Combination Prediction for VRP from VIX and RV Predictions.R` | Hierarchical VRP estimation |
+| `Volatility Risk Premium Exploratory Analysis.R` | VRP characteristics and regime analysis |
+| `Total Model Assessment.R` | Final model evaluation and SHAP analysis |
+
+### python-backtester/
+
 Event-driven backtesting framework for SPX options strategies.
+
+```
 python-backtester/
 ├── main.py              # Entry point and orchestration
 ├── requirements.txt     # Dependencies
@@ -49,47 +96,60 @@ python-backtester/
 ├── analytics/           # Performance metrics (Sharpe, drawdown, etc.)
 ├── charts/              # Visualisation outputs
 └── results/             # Trade logs and summary statistics
-Methodology
-VIX Forecasting
+```
 
-Base model: AR(1) captures autoregressive structure
-Residual model: XGBoost learns non-linear patterns in AR(1) residuals
-Features: Lagged VIX, term structure slope, volume, momentum indicators, calendar effects
-Validation: Purged expanding-window CV to prevent lookahead bias
-Hyperparameters: Bayesian optimisation via ParBayesianOptimization
+## Methodology
 
-Realised Volatility
+### VIX Forecasting
 
-Target: 22-day ahead close-to-close realised volatility
-Estimators: Parkinson, Garman-Klass, Rogers-Satchell, Yang-Zhang
-Structural breaks: Bai-Perron testing for regime shifts
+- **Base model**: AR(1) captures autoregressive structure
+- **Residual model**: XGBoost learns non-linear patterns in AR(1) residuals
+- **Features**: Lagged VIX, term structure slope, volume, momentum indicators, calendar effects
+- **Validation**: Purged expanding-window CV to prevent lookahead bias
+- **Hyperparameters**: Bayesian optimisation via ParBayesianOptimization
 
-Trading Strategy
+### Realised Volatility
 
-Instrument: SPX bull put spreads (short put + long put at lower strike)
-Entry signal: Positive VRP forecast above calibrated threshold
-Position sizing: Fixed notional per trade
-Exit: Expiration or stop-loss
+- **Target**: 22-day ahead close-to-close realised volatility
+- **Estimators**: Parkinson, Garman-Klass, Rogers-Satchell, Yang-Zhang
+- **Structural breaks**: Bai-Perron testing for regime shifts
 
-Requirements
-R
+### Trading Strategy
 
-R >= 4.0
-xgboost, ParBayesianOptimization, tidyverse, quantmod, rugarch
+- **Instrument**: SPX bull put spreads (short put + long put at lower strike)
+- **Entry signal**: Positive VRP forecast above calibrated threshold
+- **Position sizing**: Fixed notional per trade
+- **Exit**: Expiration or stop-loss
 
-Python
-bashpip install -r python-backtester/requirements.txt
-Usage
+## Requirements
 
-Run the R scripts in order (Setup.R first, then Data Download.R, etc.)
-Export VRP signals to python-backtester/signals/
-Run the backtester:
+### R
+- R >= 4.0
+- xgboost, ParBayesianOptimization, tidyverse, quantmod, rugarch
 
-bashcd python-backtester
+### Python
+```bash
+pip install -r python-backtester/requirements.txt
+```
+
+## Usage
+
+1. Run the R scripts in order (Setup.R first, then Data Download.R, etc.)
+2. Export VRP signals to `python-backtester/signals/`
+3. Run the backtester:
+```bash
+cd python-backtester
 python main.py
+```
 
+## References
 
-Author
-Andrew Fouhy
-BSc Financial Mathematics and Actuarial Science, University College Cork
+- Bollerslev, T., Tauchen, G., & Zhou, H. (2009). Expected stock returns and variance risk premia.
+- Breeden, D. T., & Litzenberger, R. H. (1978). Prices of state-contingent claims implicit in option prices.
+- Corsi, F. (2009). A simple approximate long-memory model of realized volatility.
+
+## Author
+
+Andrew Fouhy  
+BSc Financial Mathematics and Actuarial Science, University College Cork  
 andrewfouhy01@gmail.com
