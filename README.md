@@ -142,11 +142,6 @@ cd python-backtester
 python main.py
 ```
 
-## References
-
-- Bollerslev, T., Tauchen, G., & Zhou, H. (2009). Expected stock returns and variance risk premia.
-- Breeden, D. T., & Litzenberger, R. H. (1978). Prices of state-contingent claims implicit in option prices.
-- Corsi, F. (2009). A simple approximate long-memory model of realized volatility.
 
 ## Author
 
