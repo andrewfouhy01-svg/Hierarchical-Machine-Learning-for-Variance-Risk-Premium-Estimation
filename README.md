@@ -55,7 +55,6 @@ The variance risk premium (VRP) is the difference between implied volatility (VI
 ├── r-forecasting/           # R code for VIX and RV forecasting
 ├── python-backtester/       # Python backtesting engine
 ├── thesis/                  # LaTeX dissertation source
-└── presentation/            # Beamer slides
 ```
 
 ### r-forecasting/
